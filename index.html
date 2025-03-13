@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Green Investment</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="home" class="container">
+        <h1>Select Investment Preferences</h1>
+        <label for="risk">Tingkat Risiko:</label>
+        <select id="risk">
+            <option value="konservatif">Konservatif</option>
+            <option value="moderat">Moderat</option>
+            <option value="agresif">Agresif</option>
+        </select>
+        
+        <label for="funds">Estimasi Dana:</label>
+        <select id="funds">
+            <option value="/10k">&lt;10K</option>
+            <option value="10k-100k">10K - 100K</option>
+            <option value=">100k">&gt;100K</option>
+        </select>
+        
+        <label for="duration">Jangka Waktu:</label>
+        <select id="duration">
+            <option value="pendek">Pendek</option>
+            <option value="menengah">Menengah</option>
+            <option value="panjang">Panjang</option>
+        </select>
+        
+        <button onclick="goToProvince()">Next</button>
+    </div>
+    
+    <div id="provinceSelection" class="container" style="display:none;">
+        <h1>Green Infrastructure in Indonesia</h1>
+        <label for="province">Select a Province:</label>
+        <select id="province">
+            <option value="">-- Select Province --</option>
+        </select>
+        <button onclick="fetchInfrastructure()">Check Infrastructure</button>
+        <h2 id="result"></h2>
+        <h2 id="renewableEnergy"></h2>
+        <h2 id="environmentalCondition"></h2>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
