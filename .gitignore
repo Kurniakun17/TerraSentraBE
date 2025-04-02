@@ -1,0 +1,43 @@
+# Virtual environment
+myenv/
+venv/
+.env
+ee-account-key.json
+
+# Byte-compiled / cached files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Model files and large data
+# *.pkl
+*.h5
+*.joblib
+*.csv
+# *.xlsx
+
+# Logs and temp files
+*.log
+*.out
+*.pid
+.DS_Store
+
+# Node.js dependencies (if applicable)
+node_modules/
+
+# Compiled CSS (if using preprocessors like SASS)
+*.sass-cache
+*.scssc
+
+# Ignore test coverage data
+.coverage
+htmlcov/
+
+# IDE-specific files
+.vscode/
+.idea/
+*.iml

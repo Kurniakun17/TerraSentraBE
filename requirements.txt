@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+numpy
+earthengine-api
+scikit-learn
+requests
+beautifulsoup4
+certifi
