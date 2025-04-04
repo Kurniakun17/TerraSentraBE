@@ -1,0 +1,70 @@
+[
+    {
+        "id": 1,
+        "name": "Eco-Friendly Packaging",
+        "description": "Production of environmentally friendly packaging using biodegradable materials such as banana leaves, bamboo fiber, and recycled paper. This packaging can be used for various needs, including culinary businesses, retail, and shipping. With this alternative, plastic usage is reduced, helping to protect the environment.",
+        "fundRequired": "10000000",
+        "fundRaised": "0",
+        "fund_percent": "0",
+        "images": [
+            "https://kemenparekraf.go.id/_next/image?url=https%3A%2F%2Fapi2.kemenparekraf.go.id%2Fstorage%2Fapp%2Fuploads%2Fpublic%2F65f%2F269%2F873%2F65f269873d6e7307678862.jpg&w=3840&q=75",
+            "https://www.rooland.com/wp-content/uploads/2019/08/Shipping-Box_Article_bce4ec.png",
+            "https://worldbranddesign.com/wp-content/uploads/2020/06/1-PRIMAL-Sponges-world-brand-design.jpg"
+        ],
+        "green_impact": "This environmentally friendly packaging reduces plastic waste that pollutes the soil and water...",
+        "roi": 5,
+        "marketing_plan": "Targeting SMEs and large businesses that need eco-friendly packaging...",
+        "technology_solution": ""
+    },
+    {
+        "id": 2,
+        "name": "Solar-Powered Dryer for Agriculture",
+        "description": "A solar-powered dryer for agricultural products such as fruits, vegetables, and grains...",
+        "fundRequired": "15000000",
+        "fundRaised": "1500000",
+        "fund_percent": "10%",
+        "images": [
+            "https://www.ctc-n.org/sites/default/files/tunnel_dryer_1.jpg",
+            "https://sunlitsolarindia.com/uploads/banner_image-20230208034411.jpg",
+            "https://cdn.open-pr.com/L/3/L327638195_g.jpg"
+        ],
+        "green_impact": "The use of solar-powered dryers reduces electricity and fossil fuel consumption...",
+        "roi": 7,
+        "marketing_plan": "Collaborating with cooperatives and farmer associations...",
+        "technology_solution": "Utilizing photovoltaic solar panels to generate electricity..."
+    },
+    {
+        "id": 3,
+        "name": "Biodegradable Cutlery",
+        "description": "Production of single-use cutlery made from natural materials such as bamboo, cornstarch, or sugarcane fiber...",
+        "fundRequired": "12000000",
+        "fundRaised": "5500000",
+        "fund_percent": "45.88%",
+        "images": [
+            "https://image.made-in-china.com/2f0j00fvwblURPCyqH/Disposable-Biodegradable-Wooden-Tableware-Wooden-Cutlery-Fork-and-Spoon-Independent-Set-for-Hotel-Use-DL-06-.webp",
+            "https://kencanaonline.id/wp-content/uploads/5507912.jpg",
+            "https://m.indonesian.chopsticksbamboo.com/photo/pc59386812-100_biodegradable_disposable_dinnerware_compostable_sugarcane_food_container.jpg"
+        ],
+        "green_impact": "Biodegradable cutlery reduces reliance on single-use plastic...",
+        "roi": 6,
+        "marketing_plan": "Targeting restaurants, catering services, and hotels...",
+        "technology_solution": ""
+    },
+    {
+        "id": 4,
+        "name": "Waste Processing into Compost",
+        "description": "An organic waste processing system that converts kitchen and agricultural waste into high-quality natural compost...",
+        "fundRequired": "13000000",
+        "fundRaised": "500000",
+        "fund_percent": "3.84%",
+        "images": [
+            "https://eratani-dev.s3.ap-southeast-1.amazonaws.com/compro/images/blogs/Membuat%20Pupuk%20Kompos%20Alami%20dari%20Sampah%20Dapur_%20Ini%20Caranya%21.png",
+            "https://asset.kompas.com/crops/i_Lo1SHsgIgmCRbEVCzc1p2RFPk=/32x0:1000x645/1200x800/data/photo/2023/05/10/645b3d2ab0580.jpg",
+            "https://www.emindonesia.com/assets/posting/Manfaatkan-Sampah-Rumah-Tangga-Menjadi-Kompos-Dengan-EM4_686438.jpg"
+        ],
+        "green_impact": "Organic waste composting reduces the amount of waste that ends up in landfills...",
+        "roi": 8,
+        "marketing_plan": "Selling compost in ready-to-use packaging for agriculture...",
+        "technology_solution": ""
+    }
+]
