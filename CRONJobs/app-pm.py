@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import random
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
+from typing import Dict
 
 app = FastAPI()
 
@@ -45,25 +46,25 @@ provinces = [
 green_infra_mapping = {
     "Roof Garden": ["roof garden", "atap hijau"],
     "Mangrove Reforestation": ["mangrove", "reforestasi"],
-    "Penampungan Air Hujan": ["air hujan", "penampungan air"],
-    "Bangunan Hemat Energi": ["hemat energi", "bangunan hijau"],
-    "Transportasi Berkelanjutan": ["transportasi berkelanjutan", "kendaraan listrik"],
-    "Biopori": ["biopori"],
-    "Ekowisata": ["ekowisata", "wisata hijau"],
-    "Hutan Kota": ["hutan kota"],
-    "Dinding Hijau": ["dinding hijau", "vertical garden"],
+    "Rain Water Harvesting": ["air hujan", "penampungan air"],
+    "Energy Efficient Building": ["hemat energi", "bangunan hijau"],
+    "Sustainable Transportation": ["transportasi berkelanjutan", "kendaraan listrik"],
+    "Biopore": ["biopori"],
+    "Ecotourism": ["ekowisata", "wisata hijau"],
+    "Urban Forest": ["hutan kota"],
+    "Green Wall": ["dinding hijau", "vertical garden"],
     "Solar Panel": ["solar panel", "energi surya"],
-    "Rekayasa Air Limbah Hijau": ["air limbah", "pengolahan limbah"],
-    "Jalur Hijau": ["jalur hijau", "jalan hijau"],
+    "Green Wastewater Engineering": ["air limbah", "pengolahan limbah"],
+    "Green Corridor": ["jalur hijau", "jalan hijau"],
     "Biofuel Plantations": ["biofuel", "energi biomassa"]
 }
 
 renewable_energy_mapping = {
-    "Energi Surya": ["solar", "energi surya", "panel surya"],
-    "Energi Angin": ["angin", "turbin angin"],
-    "Energi Air": ["hidro", "energi air", "pembangkit listrik tenaga air"],
-    "Panas Bumi": ["geotermal", "panas bumi"],
-    "Biomassa": ["biomassa", "biofuel"]
+    "Solar Energy": ["solar", "energi surya", "panel surya"],
+    "Wind Energy": ["angin", "turbin angin"],
+    "Hydro Energy": ["hidro", "energi air", "pembangkit listrik tenaga air"],
+    "Geothermal": ["geotermal", "panas bumi"],
+    "Biomass": ["biomassa", "biofuel"]
 }
 
 # News sources
@@ -332,6 +333,127 @@ def predict_poverty_index(province):
     except Exception as e:
         print(f"Error predicting poverty index for {province}: {str(e)}")
         return "Prediction error"
+    
+# Green infrastructure cost assumptions (in billion IDR)
+green_infra_costs = {
+    "Roof Garden": 5.2,
+    "Mangrove Reforestation": 8.7,
+    "Penampungan Air Hujan": 3.4,
+    "Bangunan Hemat Energi": 12.5,
+    "Transportasi Berkelanjutan": 15.3,
+    "Biopori": 1.8,
+    "Ekowisata": 7.6,
+    "Hutan Kota": 9.2,
+    "Dinding Hijau": 4.5,
+    "Solar Panel": 10.8,
+    "Rekayasa Air Limbah Hijau": 6.9,
+    "Jalur Hijau": 5.5,
+    "Biofuel Plantations": 11.3
+}
+
+# Function to calculate environmental score
+def calculate_environmental_score(env_data: Dict) -> float:
+    """
+    Calculate environmental score based on NDVI, precipitation, and soil moisture.
+    
+    Parameters:
+    env_data (Dict): Dictionary containing environmental metrics
+    
+    Returns:
+    float: Environmental score between 0-100
+    """
+    # Check if we have valid environmental data
+    if "error" in env_data:
+        return 50.0  # Default middle score if data is missing
+    
+    # Normalize NDVI (typical range: 0-1, higher is better)
+    # Scale to 0-100
+    ndvi_score = min(100, max(0, env_data.get("ndvi", 0) * 100))
+    
+    # Normalize precipitation (ideal range: 50-200 mm/month)
+    # Score decreases if too little or too much rainfall
+    precip = env_data.get("precipitation", 0)
+    if precip < 50:
+        precip_score = (precip / 50) * 100
+    elif precip > 200:
+        precip_score = max(0, 100 - ((precip - 200) / 100) * 50)
+    else:
+        precip_score = 100
+    
+    # Normalize soil moisture (Sentinel VV polarization, typical range: -20 to 0 dB)
+    # Higher (less negative) values generally indicate more moisture
+    sentinel = env_data.get("sentinel", -10)
+    if sentinel < -20:
+        soil_score = 0
+    elif sentinel > 0:
+        soil_score = 100
+    else:
+        soil_score = ((sentinel + 20) / 20) * 100
+    
+    # Combine scores with different weights
+    # NDVI is given higher weight as it's a good indicator of vegetation health
+    weights = {"ndvi": 0.5, "precipitation": 0.3, "soil": 0.2}
+    environmental_score = (
+        weights["ndvi"] * ndvi_score +
+        weights["precipitation"] * precip_score +
+        weights["soil"] * soil_score
+    )
+    
+    return round(environmental_score, 1)
+
+# Function to calculate investment score
+def calculate_investment_score(env_data: Dict, poverty_index: float, infrastructure: str) -> Dict:
+    """
+    Calculate AI investment score based on environmental data, poverty index, and infrastructure costs.
+    
+    Parameters:
+    env_data (Dict): Environmental data dictionary
+    poverty_index (float): Poverty index value
+    infrastructure (str): Type of green infrastructure
+    
+    Returns:
+    Dict: Dictionary containing scores and breakdown
+    """
+    # Handle invalid poverty index data
+    if isinstance(poverty_index, str):
+        poverty_index = 50.0  # Default middle value
+    
+    # Get environmental score
+    env_score = calculate_environmental_score(env_data)
+    
+    # Normalize poverty index (assuming range 0-100, higher means more poverty)
+    # Invert so higher score means higher need for investment
+    poverty_score = min(100, max(0, poverty_index))
+    
+    # Get infrastructure cost factor (normalize to 0-100 scale)
+    # Lower cost means higher score (more affordable)
+    max_cost = max(green_infra_costs.values())
+    infra_cost = green_infra_costs.get(infrastructure, max_cost/2)
+    cost_factor = (1 - (infra_cost / max_cost)) * 100
+    
+    # Final investment score calculation
+    # Environmental need (40%) + Poverty alleviation need (40%) + Cost efficiency (20%)
+    weights = {"environmental": 0.4, "poverty": 0.4, "cost": 0.2}
+    
+    investment_score = (
+        weights["environmental"] * env_score +
+        weights["poverty"] * poverty_score +
+        weights["cost"] * cost_factor
+    )
+    
+    # Create categories for the score
+    category = "Very Low"
+    if investment_score >= 80:
+        category = "Very High"
+    elif investment_score >= 65:
+        category = "High"
+    elif investment_score >= 50:
+        category = "Medium"
+    elif investment_score >= 35:
+        category = "Low"
+    
+    return round(investment_score, 1)
+
 
 # API Endpoint
 @app.get("/get-infrastructure/{province}")
@@ -339,12 +461,50 @@ def get_infrastructure(province: str):
     province = province.strip().lower()
     if province not in province_coords:
         return {"error": "Invalid province name"}
+    
     environmental_data = fetch_environmental_data(province)
     poverty_index = predict_poverty_index(province)
+    infrastructure = infra_results.get(province, "Not Available")
+    
+    # Calculate investment score
+    investment_data = calculate_investment_score(
+        environmental_data, 
+        poverty_index if not isinstance(poverty_index, str) else 50.0,
+        infrastructure
+    )
+    
     return {
         "province": province.title(),
-        "infrastructure": infra_results.get(province, "Not Available"),
+        "infrastructure": infrastructure,
         "renewable_energy": renewable_results.get(province, "Not Available"),
         "poverty_index": poverty_index,
-        **environmental_data
+        **environmental_data,
+        "ai_investment_score": investment_data
     }
+    
+@app.get("/all-environmental-scores")
+def get_all_environmental_scores():
+    results = {}
+    for province in province_coords.keys():
+        province = province.strip().lower()
+        
+        environmental_data = fetch_environmental_data(province)
+        poverty_index = predict_poverty_index(province)
+        infrastructure = infra_results.get(province, "Not Available")
+        
+        # Calculate investment score
+        investment_data = calculate_investment_score(
+            environmental_data, 
+            poverty_index if not isinstance(poverty_index, str) else 50.0,
+            infrastructure
+        )
+        
+        results[province]= {
+            "province": province.title(),
+            "infrastructure": infrastructure,
+            "renewable_energy": renewable_results.get(province, "Not Available"),
+            "poverty_index": poverty_index,
+            **environmental_data,
+            "ai_investment_score": investment_data
+        }
+    return results
