@@ -1,5 +1,19 @@
 [
     {
+        "province": "Aceh",
+        "infrastructure": "Green Wall",
+        "renewable_energy": "Solar Energy",
+        "poverty_index": 9.81,
+        "ndvi": 0.75,
+        "precipitation": 5.0,
+        "sentinel": -6.457,
+        "no2": 38.502,
+        "co": 26.486,
+        "so2": 188.023,
+        "o3": 0.0,
+        "pm25": 0
+    },
+    {
         "province": "Sumatera Utara",
         "infrastructure": "Urban Forest",
         "renewable_energy": "Geothermal Energy",
