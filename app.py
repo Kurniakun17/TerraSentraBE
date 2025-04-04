@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import random
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
+import json
 
 app = FastAPI()
 
@@ -267,6 +268,7 @@ def predict_poverty_index(province):
         print(f"Error predicting poverty index for {province}: {str(e)}")
         return "Prediction error"
 
+#Get IDR Rate
 def get_exchange_rate():
     response = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
     if response.status_code == 200:
@@ -318,3 +320,20 @@ def get_carbon_offset(timestamp):
                 })
 
     return data_list if data_list else {"error": "No data found"}
+
+@app.get("/get-umkm/{id}")
+def get_umkm(id: int = None):
+    try:
+        with open("database/umkm.json", "r", encoding="utf-8") as file:
+            umkm_data = json.load(file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        return {"error": "Failed to load UMKM data"}
+
+    if id == 0: 
+        return umkm_data  
+
+    for umkm in umkm_data:
+        if umkm.get("id") == id:
+            return umkm
+
+    return {"error": "UMKM not found"}
