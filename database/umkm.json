@@ -6,6 +6,7 @@
         "fundRequired": "10000000",
         "fundRaised": "0",
         "fund_percent": "0",
+        "location": "Jakarta, Indonesia",
         "images": [
             "https://kemenparekraf.go.id/_next/image?url=https%3A%2F%2Fapi2.kemenparekraf.go.id%2Fstorage%2Fapp%2Fuploads%2Fpublic%2F65f%2F269%2F873%2F65f269873d6e7307678862.jpg&w=3840&q=75",
             "https://www.rooland.com/wp-content/uploads/2019/08/Shipping-Box_Article_bce4ec.png",
@@ -23,6 +24,8 @@
         "fundRequired": "15000000",
         "fundRaised": "1500000",
         "fund_percent": "10%",
+        "location": "Bali, Indonesia",
+
         "images": [
             "https://www.ctc-n.org/sites/default/files/tunnel_dryer_1.jpg",
             "https://sunlitsolarindia.com/uploads/banner_image-20230208034411.jpg",
@@ -40,6 +43,7 @@
         "fundRequired": "12000000",
         "fundRaised": "5500000",
         "fund_percent": "45.88%",
+        "location": "Yogyakarta, Indonesia",
         "images": [
             "https://image.made-in-china.com/2f0j00fvwblURPCyqH/Disposable-Biodegradable-Wooden-Tableware-Wooden-Cutlery-Fork-and-Spoon-Independent-Set-for-Hotel-Use-DL-06-.webp",
             "https://kencanaonline.id/wp-content/uploads/5507912.jpg",
@@ -57,6 +61,7 @@
         "fundRequired": "13000000",
         "fundRaised": "500000",
         "fund_percent": "3.84%",
+        "location": "Bandung, Indonesia",
         "images": [
             "https://eratani-dev.s3.ap-southeast-1.amazonaws.com/compro/images/blogs/Membuat%20Pupuk%20Kompos%20Alami%20dari%20Sampah%20Dapur_%20Ini%20Caranya%21.png",
             "https://asset.kompas.com/crops/i_Lo1SHsgIgmCRbEVCzc1p2RFPk=/32x0:1000x645/1200x800/data/photo/2023/05/10/645b3d2ab0580.jpg",
