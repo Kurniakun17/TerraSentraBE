@@ -1,5 +1,4 @@
 from fastapi import FastAPI
-import math
 import ee
 import pickle
 import numpy as np
@@ -8,11 +7,6 @@ from bs4 import BeautifulSoup
 import random
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
-import certifi
-import os
-
-os.environ['SSL_CERT_FILE'] = certifi.where()
-os.environ['REQUESTS_CA_BUNDLE'] = certifi.where()
 
 app = FastAPI()
 
@@ -26,26 +20,10 @@ app.add_middleware(
 )
 
 # Authenticate and initialize Google Earth Engine (GEE)
-# Metode untuk autentikasi Earth Engine berdasarkan environment
-def initialize_earth_engine():
-    try:
-        # Di Cloud Run, file credentials akan tersedia di path yg ditentukan
-        service_account_key = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
-        if service_account_key:
-            credentials = ee.ServiceAccountCredentials(None, service_account_key)
-            ee.Initialize(credentials, project='terrasentra')
-            print("Earth Engine initialized with service account")
-        else:
-            # Untuk development lokal
-            ee.Authenticate()
-            ee.Initialize(project='terrasentra')
-            print("Earth Engine initialized with interactive auth")
-    except Exception as e:
-        print(f"Error initializing Earth Engine: {e}")
-
-# Panggil fungsi di awal aplikasi
-initialize_earth_engine()
-
+try:
+    ee.Initialize(project='ee-steviaanlenaa')
+except Exception as e:
+    print("Error initializing Earth Engine:", str(e))
 
 try:
     with open("poverty_model.pkl", "rb") as f:
@@ -91,11 +69,12 @@ renewable_energy_mapping = {
 # News sources
 news_sites = ["https://www.kompas.com/tag/infrastruktur-hijau", "https://www.detik.com/tag/infrastruktur-hijau"]
 energy_sites = ["https://www.kompas.com/tag/energi-terbarukan", "https://www.detik.com/tag/energi-terbarukan"]
+carbon_sites = "https://www.investing.com/commodities/carbon-emissions-historical-data"
+headers = {'User-Agent': 'Mozilla/5.0'}
 
 # Function to scrape news articles
 def scrape_news(sites):
     articles = []
-    headers = {'User-Agent': 'Mozilla/5.0'}
     for site in sites:
         try:
             response = requests.get(site, headers=headers, timeout=10)
@@ -174,11 +153,12 @@ def fetch_environmental_data(province):
 
     try:
         # Replace NDVI with EVI (Enhanced Vegetation Index)
-        evi_image = ee.ImageCollection("MODIS/006/MOD13A2") \
+        ndvi_image = ee.ImageCollection("MODIS/061/MOD13Q1") \
             .filterDate(start_date, end_date) \
-            .select("EVI") \
+            .select("NDVI") \
+            .map(lambda img: img.updateMask(img.gt(0))) \
             .mean() \
-            .reduceRegion(reducer=ee.Reducer.mean(), geometry=point.buffer(1000), scale=500, bestEffort=True)
+            .reduceRegion(reducer=ee.Reducer.mean(), geometry=point.buffer(10000), scale=250, bestEffort=True)
 
         precipitation_image = ee.ImageCollection("UCSB-CHG/CHIRPS/DAILY") \
             .filterDate(start_date, end_date) \
@@ -193,7 +173,7 @@ def fetch_environmental_data(province):
             .reduceRegion(reducer=ee.Reducer.mean(), geometry=point, scale=500, bestEffort=True)
 
         return {
-            "evi": round(evi_image.getInfo().get("EVI", 0) * 0.0001, 2),  # EVI values need scaling
+            "ndvi": round(ndvi_image.getInfo().get("NDVI", 0) * 0.0001, 2),
             "precipitation": round(precipitation_image.getInfo().get("precipitation", 0), 1),
             "sentinel": round(soil_moisture_image.getInfo().get("VV", 0), 3)
         }
@@ -287,237 +267,54 @@ def predict_poverty_index(province):
         print(f"Error predicting poverty index for {province}: {str(e)}")
         return "Prediction error"
 
-# Update the function to include ROI calculation and user input factors
-def calculate_investment_score(data, risk_level="moderate", investment_amount=100000, investment_term=5):
-    # Extract data
-    poverty_index = data.get("poverty_index")
-    evi = data.get("evi", 0)
-    precipitation = data.get("precipitation", 0)
-    sentinel = data.get("sentinel", 0)  # soil moisture
-    infrastructure = data.get("infrastructure", "")
-    
-    # Skip calculation if any data is missing
-    if isinstance(poverty_index, str) or "error" in data:
-        return None
-    
-    # Infrastructure cost ratings (0-100 scale, higher = more expensive)
-    infra_cost_ratings = {
-        "Biofuel Plantations": 75,
-        "Solar Panel": 80,
-        "Mangrove Reforestation": 55,
-        "Roof Garden": 40,
-        "Penampungan Air Hujan": 35,
-        "Bangunan Hemat Energi": 85,
-        "Transportasi Berkelanjutan": 90,
-        "Biopori": 20,
-        "Ekowisata": 60,
-        "Hutan Kota": 65,
-        "Dinding Hijau": 45,
-        "Rekayasa Air Limbah Hijau": 70,
-        "Jalur Hijau": 50
-    }
-    
-    # Risk level impacts weight distribution and expected returns
-    risk_weights = {
-        "conservative": {"poverty": 0.3, "environment": 0.3, "cost": 0.4, "base_return": 0.05},
-        "moderate": {"poverty": 0.4, "environment": 0.3, "cost": 0.3, "base_return": 0.08},
-        "high": {"poverty": 0.5, "environment": 0.3, "cost": 0.2, "base_return": 0.12}
-    }
-    
-    # Use moderate as default if invalid risk level provided
-    weights = risk_weights.get(risk_level.lower(), risk_weights["moderate"])
-    
-    # Get infrastructure cost rating and convert to actual cost estimate
-    infra_cost_rating = infra_cost_ratings.get(infrastructure, 50)
-    
-    # Convert 0-100 rating to actual cost percentage of investment
-    # Higher rating = higher percentage of investment needed for implementation
-    implementation_cost_percentage = infra_cost_rating / 100
-    implementation_cost = investment_amount * implementation_cost_percentage
-    
-    # Normalize poverty index (higher poverty = higher score for impact)
-    poverty_score = min(max(poverty_index / 20 * 100, 0), 100)
-    
-    # Normalize environmental factors (0-100 scale)
-    evi_score = min(max(evi * 100, 0), 100)
-    moisture_score = min(max((sentinel + 10) / 20 * 100, 0), 100)
-    precipitation_score = min(max(precipitation / 15 * 100, 0), 100)
-    
-    # Environmental score (average of three factors)
-    environmental_score = (evi_score + moisture_score + precipitation_score) / 3
-    # environmental_score = ( moisture_score + precipitation_score) / 2
-    
-    # Cost-benefit score (invert cost so lower cost = higher score)
-    cost_benefit_score = 100 - infra_cost_rating
-    
-    # Calculate investment score based on risk weights
-    investment_score = (
-        (poverty_score * weights["poverty"]) + 
-        (environmental_score * weights["environment"]) + 
-        (cost_benefit_score * weights["cost"])
-    )
-    
-    # Calculate ROI
-    # Base return rate modified by investment score
-    base_return_rate = weights["base_return"]
-    
-    # Adjust return rate based on investment score (better score = better returns)
-    # Score ranges from 0-100, so normalize to a 0.5-1.5 multiplier
-    score_multiplier = 0.5 + (investment_score / 100)
-    
-    # Factor in investment term (longer term generally means higher total returns but diminishing yearly returns)
-    # Use a logarithmic scale to represent diminishing returns over time
-    term_factor = 1 + (0.1 * math.log(investment_term + 1))
-    
-    # Calculate annual return rate
-    annual_return_rate = base_return_rate * score_multiplier * term_factor
-    
-    # Calculate total ROI over the investment term
-    # Using compound interest formula: FV = PV * (1 + r)^t
-    total_roi_percentage = ((1 + annual_return_rate) ** investment_term - 1) * 100
-    
-    # Calculate monetary ROI
-    total_return = investment_amount * (1 + annual_return_rate) ** investment_term
-    net_profit = total_return - investment_amount
-    
-    return {
-        "score": round(investment_score, 1),
-        "roi": {
-            "annual_return_rate": round(annual_return_rate * 100, 2),  # as percentage
-            "total_roi_percentage": round(total_roi_percentage, 2),
-            "total_return": round(total_return, 2),
-            "net_profit": round(net_profit, 2),
-            "implementation_cost": round(implementation_cost, 2),
-            "investment_term": investment_term,
-            "risk_level": risk_level
-        },
-        "breakdown": {
-            "poverty_score": round(poverty_score, 1),
-            "environmental_score": round(environmental_score, 1),
-            "cost_benefit_score": round(cost_benefit_score, 1),
-            "infrastructure_cost_rating": infra_cost_rating
-        }
-    }
+def get_exchange_rate():
+    response = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
+    if response.status_code == 200:
+        return response.json().get("rates", {}).get("IDR", 16000)  
+    return 16000
 
 # API Endpoint
 @app.get("/get-infrastructure/{province}")
-def get_infrastructure(
-    province: str,
-    risk_level: str = "moderate",
-    investment_amount: float = 100000,
-    investment_term: int = 5
-):
-    # Validate inputs
-    if risk_level.lower() not in ["conservative", "moderate", "high"]:
-        risk_level = "moderate"
-    
-    if investment_amount <= 0:
-        investment_amount = 100000
-    
-    if investment_term < 1 or investment_term > 30:
-        investment_term = 5
-    
+def get_infrastructure(province: str):
     province = province.strip().lower()
     if province not in province_coords:
         return {"error": "Invalid province name"}
-    
-    # Fetch environmental data
     environmental_data = fetch_environmental_data(province)
-    
-    # Fetch poverty index
     poverty_index = predict_poverty_index(province)
-    
-    # Compile the response data
-    response_data = {
+    return {
         "province": province.title(),
         "infrastructure": infra_results.get(province, "Not Available"),
         "renewable_energy": renewable_results.get(province, "Not Available"),
         "poverty_index": poverty_index,
         **environmental_data
     }
-    
-    # Calculate investment score and ROI with user parameters
-    investment_data = calculate_investment_score(
-        response_data, 
-        risk_level=risk_level,
-        investment_amount=investment_amount,
-        investment_term=investment_term
-    )
-    
-    if investment_data:
-        response_data["investment_score"] = investment_data["score"]
-        response_data["roi"] = investment_data["roi"]
-        response_data["score_breakdown"] = investment_data["breakdown"]
-    
-    return response_data
 
 
-@app.get("/get-all-provinces")
-def get_all_provinces(
-    risk_level: str = "moderate",
-    investment_amount: float = 100000,
-    investment_term: int = 5
-):
-    # Validate inputs
-    if risk_level.lower() not in ["conservative", "moderate", "high"]:
-        risk_level = "moderate"
+@app.get("/get-carbon-offset")
+def get_carbon_offset(timestamp):
+    response = requests.get(carbon_sites, headers=headers)
     
-    if investment_amount <= 0:
-        investment_amount = 100000
+    if response.status_code != 200:
+        return {"error": "Failed to retrieve data", "status_code": response.status_code}
     
-    if investment_term < 1 or investment_term > 30:
-        investment_term = 5
-    
-    # Container for all province data
-    all_provinces_data = []
-    
-    # Process each province
-    for province in provinces:
-        try:
-            # Fetch environmental data
-            environmental_data = fetch_environmental_data(province)
-            
-            # Fetch poverty index
-            poverty_index = predict_poverty_index(province)
-            
-            # Compile the response data
-            province_data = {
-                "province": province.title(),
-                "infrastructure": infra_results.get(province, "Not Available"),
-                "renewable_energy": renewable_results.get(province, "Not Available"),
-                "poverty_index": poverty_index,
-                **environmental_data
-            }
-            
-            # Calculate investment score and ROI with user parameters
-            investment_data = calculate_investment_score(
-                province_data, 
-                risk_level=risk_level,
-                investment_amount=investment_amount,
-                investment_term=investment_term
-            )
-            
-            if investment_data:
-                province_data["investment_score"] = investment_data["score"]
-                province_data["roi"] = investment_data["roi"]
-                province_data["score_breakdown"] = investment_data["breakdown"]
-            
-            all_provinces_data.append(province_data)
-            
-        except Exception as e:
-            # If there's an error processing a particular province, include error info
-            all_provinces_data.append({
-                "province": province.title(),
-                "error": f"Failed to process data: {str(e)}"
-            })
-    
-    # Return the complete dataset
-    return {
-        "count": len(all_provinces_data),
-        "parameters": {
-            "risk_level": risk_level,
-            "investment_amount": investment_amount,
-            "investment_term": investment_term
-        },
-        "provinces": all_provinces_data
-    }
+    soup = BeautifulSoup(response.text, "html.parser")
+    table = soup.find("table")
+    exchange_rate = get_exchange_rate()
+    data_list = []
+
+    if table:
+        rows = table.find_all("tr")[1:]  
+        for row in rows:
+            cols = [col.text.strip() for col in row.find_all("td")]
+            if len(cols) == 7:  
+                data_list.append({
+                    "Date": cols[0],
+                    "Price (IDR)": round(float(cols[1].replace(",", "")) * exchange_rate, 2),
+                    "Open (IDR)": round(float(cols[2].replace(",", "")) * exchange_rate, 2),
+                    "High (IDR)": round(float(cols[3].replace(",", "")) * exchange_rate, 2),
+                    "Low (IDR)": round(float(cols[4].replace(",", "")) * exchange_rate, 2),
+                    "Vol": cols[5],
+                    "Change %": cols[6]
+                })
+
+    return data_list if data_list else {"error": "No data found"}
