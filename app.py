@@ -69,11 +69,12 @@ renewable_energy_mapping = {
 # News sources
 news_sites = ["https://www.kompas.com/tag/infrastruktur-hijau", "https://www.detik.com/tag/infrastruktur-hijau"]
 energy_sites = ["https://www.kompas.com/tag/energi-terbarukan", "https://www.detik.com/tag/energi-terbarukan"]
+carbon_sites = "https://www.investing.com/commodities/carbon-emissions-historical-data"
+headers = {'User-Agent': 'Mozilla/5.0'}
 
 # Function to scrape news articles
 def scrape_news(sites):
     articles = []
-    headers = {'User-Agent': 'Mozilla/5.0'}
     for site in sites:
         try:
             response = requests.get(site, headers=headers, timeout=10)
@@ -266,6 +267,12 @@ def predict_poverty_index(province):
         print(f"Error predicting poverty index for {province}: {str(e)}")
         return "Prediction error"
 
+def get_exchange_rate():
+    response = requests.get("https://api.exchangerate-api.com/v4/latest/USD")
+    if response.status_code == 200:
+        return response.json().get("rates", {}).get("IDR", 16000)  
+    return 16000
+
 # API Endpoint
 @app.get("/get-infrastructure/{province}")
 def get_infrastructure(province: str):
@@ -281,3 +288,33 @@ def get_infrastructure(province: str):
         "poverty_index": poverty_index,
         **environmental_data
     }
+
+
+@app.get("/get-carbon-offset")
+def get_carbon_offset(timestamp):
+    response = requests.get(carbon_sites, headers=headers)
+    
+    if response.status_code != 200:
+        return {"error": "Failed to retrieve data", "status_code": response.status_code}
+    
+    soup = BeautifulSoup(response.text, "html.parser")
+    table = soup.find("table")
+    exchange_rate = get_exchange_rate()
+    data_list = []
+
+    if table:
+        rows = table.find_all("tr")[1:]  
+        for row in rows:
+            cols = [col.text.strip() for col in row.find_all("td")]
+            if len(cols) == 7:  
+                data_list.append({
+                    "Date": cols[0],
+                    "Price (IDR)": round(float(cols[1].replace(",", "")) * exchange_rate, 2),
+                    "Open (IDR)": round(float(cols[2].replace(",", "")) * exchange_rate, 2),
+                    "High (IDR)": round(float(cols[3].replace(",", "")) * exchange_rate, 2),
+                    "Low (IDR)": round(float(cols[4].replace(",", "")) * exchange_rate, 2),
+                    "Vol": cols[5],
+                    "Change %": cols[6]
+                })
+
+    return data_list if data_list else {"error": "No data found"}
