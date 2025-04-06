@@ -8,6 +8,14 @@ import json
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  
+    allow_credentials=True,
+    allow_methods=["*"],  
+    allow_headers=["*"],  
+)
+
 # Load configuration
 config = {
     "routes": [
@@ -35,11 +43,23 @@ def get_exchange_rate():
 carbon_sites = "https://www.investing.com/commodities/carbon-emissions-historical-data"
 headers = {'User-Agent': 'Mozilla/5.0'}
 
+@app.get("/get-infrastructure")
+async def get_all_infrastructure():
+    """Get all infrastructure data"""
+    try:
+        with open("database/infrastructure.json", "r") as file:
+            data = json.load(file)
+        return data
+    except FileNotFoundError:
+        raise HTTPException(status_code=500, detail="Infrastructure data file not found")
+    except json.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Error parsing infrastructure data file")
+
 @app.get("/get-infrastructure/{province}")
 async def get_infrastructure(province: str):
     """Get infrastructure data for a specific province"""
     try:
-        with open("infrastructure.json", "r") as file:
+        with open("database/infrastructure.json", "r") as file:
             data = json.load(file)
         # print(data)
         province = province.lower()
@@ -53,23 +73,42 @@ async def get_infrastructure(province: str):
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Error parsing infrastructure data file")
 
+@app.get("/green-bond")
 @app.get("/green-bond/{bond_id}")
-async def get_green_bond(bond_id: str):
-    """Get green bond information by bond ID"""
+async def get_green_bond(bond_id: str = None, amount: int = None):
+    """
+    Get green bond information:
+    - If bond_id provided: return specific bond
+    - If amount=0: return all bonds
+    - If amount>0: return that many bonds
+    """
     try:
-        with open("green-bond.json", "r") as file:
+        with open("database/green-bond.json", "r") as file:
             data = json.load(file)
-       
-        for bond in data:  # No need to access a 'bonds' key
-            print(int(bond.get("id")) == int(bond_id))
-            if int(bond.get("id")) == int(bond_id):
-                return bond
         
-        raise HTTPException(status_code=404, detail=f"Bond ID '{bond_id}' not found")
+        # Case 1: Specific bond ID requested
+        if bond_id is not None:
+            for bond in data:
+                if int(bond.get("id")) == int(bond_id):
+                    return bond
+            raise HTTPException(status_code=404, detail=f"Bond ID '{bond_id}' not found")
+        
+        # Case 2: Amount specified
+        if amount is not None:
+            if amount == 0:
+                return data  # Return all bonds
+            elif amount > 0:
+                return data[:amount]  # Return limited number of bonds
+        
+        # Default: Return all bonds
+        return data
+        
     except FileNotFoundError:
         raise HTTPException(status_code=500, detail="Green bond data file not found")
     except json.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Error parsing green bond data file")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid bond ID format")
 
 @app.get("/get-umkm/{id}")
 def get_umkm(id: int = None):
