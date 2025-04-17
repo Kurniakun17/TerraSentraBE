@@ -7,6 +7,8 @@ from bs4 import BeautifulSoup
 import random
 from fastapi.middleware.cors import CORSMiddleware
 from datetime import datetime, timedelta
+import psycopg2
+
 from typing import Dict
 
 app = FastAPI()
@@ -458,6 +460,7 @@ def calculate_investment_score(env_data: Dict, poverty_index: float, infrastruct
 # API Endpoint
 @app.get("/get-infrastructure/{province}")
 def get_infrastructure(province: str):
+    period = datetime.now().strftime("%Y-%m-%d")
     province = province.strip().lower()
     if province not in province_coords:
         return {"error": "Invalid province name"}
@@ -465,21 +468,71 @@ def get_infrastructure(province: str):
     environmental_data = fetch_environmental_data(province)
     poverty_index = predict_poverty_index(province)
     infrastructure = infra_results.get(province, "Not Available")
-    
+    renewable_energy = renewable_results.get(province, "Not Available")
+
     # Calculate investment score
-    investment_data = calculate_investment_score(
+    investment_score = calculate_investment_score(
         environmental_data, 
         poverty_index if not isinstance(poverty_index, str) else 50.0,
         infrastructure
     )
     
+    data = {
+        "province": province.title(),
+        "infrastructure": infrastructure,
+        "renewable_energy": renewable_energy,
+        "poverty_index": poverty_index,
+        "ndvi": environmental_data.get("ndvi"),
+        "precipitation": environmental_data.get("precipitation"),
+        "sentinel": environmental_data.get("sentinel"),
+        "no2": environmental_data.get("no2"),
+        "co": environmental_data.get("co"),
+        "so2": environmental_data.get("so2"),
+        "o3": environmental_data.get("o3"),
+        "pm25": environmental_data.get("pm25"),
+        "ai_investment_score": investment_score,
+        "period" : period
+    }
+    
+    try:
+        conn = psycopg2.connect(
+            dbname="terrasentra",
+            user="postgres",
+            password="135135",
+            host="localhost",
+            port="5432"
+        )
+        cur = conn.cursor()
+        cur.execute("""
+            SELECT insert_infrastructure_data(
+                %(province)s,
+                %(infrastructure)s,
+                %(renewable_energy)s,
+                %(poverty_index)s,
+                %(ndvi)s,
+                %(precipitation)s,
+                %(sentinel)s,
+                %(no2)s,
+                %(co)s,
+                %(so2)s,
+                %(o3)s,
+                %(pm25)s,
+                %(ai_investment_score)s,
+                %(period)s
+            )
+        """, data)
+        print('a')
+        conn.commit()
+    except Exception as ex:
+        print("Error inserting data into Database:", ex)
     return {
         "province": province.title(),
         "infrastructure": infrastructure,
-        "renewable_energy": renewable_results.get(province, "Not Available"),
+        "renewable_energy": renewable_energy,
         "poverty_index": poverty_index,
         **environmental_data,
-        "ai_investment_score": investment_data
+        "ai_investment_score": investment_score,
+        "period" : period
     }
     
 @app.get("/all-environmental-scores")
